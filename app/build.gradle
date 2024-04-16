@@ -1,15 +1,16 @@
 plugins {
     id 'com.android.application'
+    id 'com.zeroc.gradle.ice-builder.slice' version '1.4.7' apply false
 }
 
 android {
     namespace 'com.example.app'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.app"
         minSdk 24
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -35,4 +36,5 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.zeroc:ice:3.7.2'
 }
