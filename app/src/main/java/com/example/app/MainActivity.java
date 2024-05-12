@@ -1,5 +1,15 @@
 package com.example.app;
 
+import android.content.Intent;
+import android.media.MediaPlayer;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.widget.ImageButton;
+import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -8,26 +18,20 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.zeroc.Ice.Communicator;
 import com.zeroc.Ice.Util;
 
-import MusicServer.MusicManagerPrx;
-import MusicServer.MusicNotFoundError;
-
-
-import android.annotation.SuppressLint;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.media.MediaPlayer;
-import android.os.Bundle;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
-import android.widget.ImageButton;
-import android.widget.TextView;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+
+import MusicServer.MusicManagerPrx;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity implements SongAdapter.OnTitleClickListener {
     RecyclerView recyclerView;
@@ -43,7 +47,6 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
     FloatingActionButton buttonMircro;
 
     private SpeechRecognizer speechRecognizer;
-
 
 
     @Override
@@ -97,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
         MusicServer.MusicInfo[] musicInfos = musicManager.listAllMusic();
 
         List<Song> songs = new ArrayList<>();
-        for (MusicServer.MusicInfo music: musicInfos) {
+        for (MusicServer.MusicInfo music : musicInfos) {
             songs.add(new Song(music.title, music.artist));
 
         }
@@ -108,7 +111,6 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
         recyclerView.setAdapter(adapter);
 
         mediaPlayer = new MediaPlayer();
-
 
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
@@ -147,12 +149,16 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
             public void onResults(Bundle results) {
                 // Résultats de la reconnaissance vocale
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                if (matches != null && !matches.isEmpty()) {
+                if (matches!= null &&!matches.isEmpty()) {
                     String spokenText = matches.get(0); // Récupérez la première correspondance (la plus probable)
                     // Utilisez spokenText comme vous le souhaitez, par exemple, affichez-le dans un TextView
                     System.out.println(spokenText);
+
+                    new ExtractTask().execute(spokenText);
                 }
             }
+
+
 
             @Override
             public void onPartialResults(Bundle partialResults) {
@@ -164,6 +170,71 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
 
             }
         });
+    }
+
+    private class ExtractTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... spokenText) {
+            OkHttpClient client = new OkHttpClient();
+
+            // Create a JSON object with a "text" key
+            JSONObject jsonObjectRequest = new JSONObject();
+            try {
+                jsonObjectRequest.put("text", spokenText[0]);
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(spokenText[0]);
+
+            // Convert the JSON object to a string
+            String jsonString = jsonObjectRequest.toString();
+
+            RequestBody requestBody = RequestBody.create(MediaType.get("application/json"), jsonString);
+
+            Request request = new Request.Builder()
+                    .url("http://192.168.0.19:6543/extract")
+                    .post(requestBody)
+                    .build();
+
+            try {
+                Response response = client.newCall(request).execute();
+                // Parse the response
+                if (response.isSuccessful()) {
+                    JSONObject jsonObject = new JSONObject(response.body().string());
+                    String action = jsonObject.getString("action");
+                    String musicName = jsonObject.getString("music_name");
+                    // Do something with the extracted action and music name
+                    return "Action: " + action + ", Music Name: " + musicName;
+                } else {
+                    // Handle error
+                    return "Error: " + response.code() + " message: " + response.message();
+                }
+            } catch (IOException | JSONException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            System.out.println(result);
+            String[] parts = result.split(", ");
+            String action = parts[0].replace("Action: ", "");
+            String musicName = parts[1].replace("Music Name: ", "");
+
+            if (action.equals("jouer")) {
+                // Find the song in the list that matches the music name
+                for (int i = 0; i < adapter.getItemCount(); i++) {
+                    Song song = adapter.getItem(i);
+                    if (song.getTitle().equals(musicName)) {
+                        onTitleClick(i); // Play the song
+                        break;
+                    }
+                }
+            }
+            if (action.equals("pause")) {
+                musicManager.pauseMusic();
+            }
+        }
     }
 
 
