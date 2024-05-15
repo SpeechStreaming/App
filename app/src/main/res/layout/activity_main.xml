@@ -32,19 +32,25 @@
             android:id="@+id/buttonPrevious"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@android:drawable/ic_media_previous" />
+            app:srcCompat="@drawable/ic_previous"
+            android:background="@drawable/transparent"
+            android:scaleType="fitXY"/>
 
         <ImageButton
             android:id="@+id/buttonPlay"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@android:drawable/ic_media_pause" />
+            app:srcCompat="@drawable/ic_play"
+            android:background="@drawable/transparent"
+            android:scaleType="fitXY"/>
 
         <ImageButton
             android:id="@+id/buttonNext"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@android:drawable/ic_media_next" />
+            app:srcCompat="@drawable/ic_next"
+            android:background="@drawable/transparent"
+            android:scaleType="fitXY"/>
 
 
         <LinearLayout

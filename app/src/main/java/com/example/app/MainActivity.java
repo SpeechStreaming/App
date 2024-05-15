@@ -1,5 +1,6 @@
 package com.example.app;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
@@ -48,6 +49,9 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
 
     private SpeechRecognizer speechRecognizer;
 
+    private ProgressDialog progressDialog;
+    boolean isPlaying = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +65,11 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
         buttonNext = this.findViewById(R.id.buttonNext);
         buttonPlay = this.findViewById(R.id.buttonPlay);
         buttonMircro = this.findViewById(R.id.buttonMircro);
+
+        progressDialog = new ProgressDialog(MainActivity.this);
+        progressDialog.setMessage("Parlez maintenant...");
+        progressDialog.setCancelable(false); // Empêcher l'utilisateur de fermer la boîte de dialogue
+
 
         buttonPrevious.setOnClickListener(v -> {
             if (lastPlayed > 0) {
@@ -77,11 +86,14 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
         });
 
         buttonPlay.setOnClickListener(v -> {
+            isPlaying = !isPlaying;
+            changePausePlayButton();
             musicManager.pauseMusic();
         });
 
         buttonMircro.setOnClickListener(v -> {
             if (speechRecognizer != null) {
+                progressDialog.show();
                 // Créez un Intent pour la reconnaissance vocale
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -147,6 +159,10 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
 
             @Override
             public void onResults(Bundle results) {
+                if (progressDialog != null && progressDialog.isShowing()) {
+                    progressDialog.dismiss();
+                }
+
                 // Résultats de la reconnaissance vocale
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches!= null &&!matches.isEmpty()) {
@@ -232,6 +248,8 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
                 }
             }
             if (action.equals("pause")) {
+                isPlaying = !isPlaying;
+                changePausePlayButton();
                 musicManager.pauseMusic();
             }
         }
@@ -240,6 +258,8 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
 
     @Override
     public void onTitleClick(int position) {
+        isPlaying = true;
+        changePausePlayButton();
         Song song = adapter.getItem(position);
         textSongTitle.setText(song.getTitle());
         textSongArtist.setText(song.getArtist());
@@ -271,5 +291,13 @@ public class MainActivity extends AppCompatActivity implements SongAdapter.OnTit
             speechRecognizer.destroy();
         }
         mediaPlayer.release();
+    }
+
+    public void changePausePlayButton() {
+        if (isPlaying) {
+            buttonPlay.setImageResource(R.drawable.ic_pause);
+        } else {
+            buttonPlay.setImageResource(R.drawable.ic_play);
+        }
     }
 }
